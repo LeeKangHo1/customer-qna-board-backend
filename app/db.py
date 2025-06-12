@@ -8,5 +8,5 @@ def get_connection():
         password=config.DB_PASSWORD,
         database=config.DB_NAME,
         charset='utf8mb4',
-        cursorclass=pymysql.cursors.DictCursor
+        cursorclass=pymysql.cursors.DictCursor  # 결과를 딕셔너리로 받음
     )
