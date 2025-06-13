@@ -18,13 +18,14 @@
 
 ```json
 {
-  "token": "<JWT Token>",
-  "user": {
-    "id": 1,
-    "login_id": "user123",
-    "name": "홍길동",
-    "email": "user@example.com"
-  }
+    "token": jwt_token,
+    "user": {
+        "email": "neeww@example.com",
+        "id": 2,
+        "is_admin": true,
+        "login_id": "sa",
+        "name": "김철wer수"
+    }
 }
 
 ```
