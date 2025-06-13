@@ -1,5 +1,11 @@
+# ✅ user_routes.py - 리팩터링
+
 from flask import Blueprint, request, jsonify
-from app.services.user_service import register_user, login_user, delete_user_by_credential
+from app.services.user_service import (
+    register_user, login_user, delete_user_by_credential,
+    update_user_info, get_user_by_id
+)
+from app.utils.jwt_util import create_token, token_required
 
 user_bp = Blueprint("user", __name__)
 
@@ -8,20 +14,17 @@ user_bp = Blueprint("user", __name__)
 def login():
     try:
         data = request.get_json()
-        response = login_user(data)
-        return jsonify({
-            "success": True,
-            "response": response,
-            "status": 200,
-            "errorMessage": None
-        }), 200
+        user = login_user(data)
+
+        token = create_token({
+            "id": user["id"],
+            "login_id": user["login_id"],
+            "is_admin": user["is_admin"]
+        })
+
+        return jsonify({"token": token}), 200
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "response": None,
-            "status": 401,
-            "errorMessage": str(e)
-        }), 401
+        return jsonify({"message": str(e)}), 401
 
 # 회원가입 (POST /api/users)
 @user_bp.route("/users", methods=["POST"])
@@ -43,14 +46,13 @@ def register():
             "errorMessage": str(e)
         }), 500
 
-
-# 비밀번호 확인 후 회원 탈퇴 (DELETE /api/users)
+# 회원 탈퇴 (DELETE /api/users)
 @user_bp.route("/users", methods=["DELETE"])
+@token_required
 def delete_user():
     try:
         data = request.get_json()
         response, status = delete_user_by_credential(data)
-
         return jsonify({
             "success": status == 200,
             "response": response if status == 200 else None,
@@ -65,15 +67,13 @@ def delete_user():
             "errorMessage": str(e)
         }), 500
 
-from app.services.user_service import update_user_info
-
 # 회원정보 수정 (PUT /api/users/<user_id>)
 @user_bp.route("/users/<int:user_id>", methods=["PUT"])
+@token_required
 def update_user(user_id):
     try:
         data = request.get_json()
         response, status = update_user_info(user_id, data)
-
         return jsonify({
             "success": status == 200,
             "response": response if status == 200 else None,
@@ -87,16 +87,13 @@ def update_user(user_id):
             "status": 500,
             "errorMessage": str(e)
         }), 500
-    
-
-from app.services.user_service import get_user_by_id
 
 # 마이페이지 조회 (GET /api/users/<user_id>)
 @user_bp.route("/users/<int:user_id>", methods=["GET"])
+@token_required
 def get_user(user_id):
     try:
         response, status = get_user_by_id(user_id)
-
         return jsonify({
             "success": status == 200,
             "response": response if status == 200 else None,
@@ -110,4 +107,3 @@ def get_user(user_id):
             "status": 500,
             "errorMessage": str(e)
         }), 500
-

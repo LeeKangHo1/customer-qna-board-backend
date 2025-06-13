@@ -1,55 +1,55 @@
+# ✅ inquiry_model.py - 리팩터링
+
 from app.db import get_connection
 
-# 문의글 등록 함수
+# 공통 DB 유틸
+def _query_one(sql, params):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, params)
+            return cursor.fetchone()
+
+def _query_all(sql, params=None):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, params or ())
+            return cursor.fetchall()
+
+def _execute(sql, params):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, params)
+        conn.commit()
+
+# 문의글 등록
 def insert_inquiry(user_id, title, content, is_secret):
-    """
-    사용자가 작성한 문의글을 DB에 저장하는 함수
-    """
     sql = """
         INSERT INTO inquiry (user_id, title, content, is_secret)
         VALUES (%s, %s, %s, %s)
     """
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, (user_id, title, content, is_secret))
-        conn.commit()
+    _execute(sql, (user_id, title, content, is_secret))
 
-# 문의글 단일 조회
+# 단일 조회
 def find_inquiry_by_id(inquiry_id):
-    """
-    문의글 ID로 단일 문의글 정보를 조회하는 함수
-    """
     sql = """
         SELECT i.*, u.name
         FROM inquiry i
         JOIN user u ON i.user_id = u.id
         WHERE i.id = %s AND i.is_deleted = 0
     """
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, (inquiry_id,))
-            return cursor.fetchone()
+    return _query_one(sql, (inquiry_id,))
 
-# 사용자 ID로 본인의 모든 문의글 조회
+# 사용자별 전체 조회
 def find_inquiries_by_user(user_id):
-    """
-    사용자의 전체 문의글 목록을 조회하는 함수 (삭제 제외)
-    """
     sql = """
         SELECT * FROM inquiry
         WHERE user_id = %s AND is_deleted = 0
         ORDER BY created_at DESC
     """
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, (user_id,))
-            return cursor.fetchall()
+    return _query_all(sql, (user_id,))
 
-# 전체 문의글 조회 (관리자용)
+# 관리자 전체 조회
 def find_all_inquiries():
-    """
-    전체 문의글 목록을 조회하는 함수 (관리자 전용)
-    """
     sql = """
         SELECT i.*, u.name
         FROM inquiry i
@@ -57,16 +57,10 @@ def find_all_inquiries():
         WHERE i.is_deleted = 0
         ORDER BY created_at DESC
     """
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(sql)
-            return cursor.fetchall()
+    return _query_all(sql)
 
-# 문의글 수정
+# 수정
 def update_inquiry(inquiry_id, title, content, is_secret):
-    """
-    제목, 내용, 비밀글 여부를 수정하는 함수
-    """
     sql = """
         UPDATE inquiry
         SET title = %s,
@@ -75,46 +69,32 @@ def update_inquiry(inquiry_id, title, content, is_secret):
             updated_at = NOW()
         WHERE id = %s AND is_deleted = 0
     """
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, (title, content, is_secret, inquiry_id))
-        conn.commit()
+    _execute(sql, (title, content, is_secret, inquiry_id))
 
-# 문의글 논리 삭제
+# 논리 삭제
 def delete_inquiry(inquiry_id):
-    """
-    문의글을 논리적으로 삭제하는 함수 (is_deleted = 1)
-    """
     sql = "UPDATE inquiry SET is_deleted = 1 WHERE id = %s"
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, (inquiry_id,))
-        conn.commit()
+    _execute(sql, (inquiry_id,))
 
-# 조건에 맞는 문의글 목록을 검색, 정렬, 페이징하여 조회
+# 검색, 정렬, 페이징 조회
 def search_inquiries(keyword=None, page=1, size=10, sort="latest"):
-    """
-    조건(검색, 정렬, 페이징)에 따라 문의글 목록을 조회하는 함수
-    """
     offset = (page - 1) * size
     params = []
-    where_clauses = ["is_deleted = 0"]
+    where = ["i.is_deleted = 0"]
 
-    # 검색 조건
     if keyword:
-        where_clauses.append("(title LIKE %s OR content LIKE %s)")
-        like_keyword = f"%{keyword}%"
-        params += [like_keyword, like_keyword]
+        where.append("(i.title LIKE %s OR i.content LIKE %s)")
+        kw = f"%{keyword}%"
+        params += [kw, kw]
 
-    where_sql = " AND ".join(where_clauses)
+    where_sql = " AND ".join(where)
 
-    # 정렬 조건
     if sort == "answered":
-        order_sql = "status = 'answered' DESC, created_at DESC"
+        order_sql = "i.status = 'answered' DESC, i.created_at DESC"
     elif sort == "unanswered":
-        order_sql = "status = 'open' DESC, created_at DESC"
+        order_sql = "i.status = 'open' DESC, i.created_at DESC"
     else:
-        order_sql = "created_at DESC"  # 기본 최신순
+        order_sql = "i.created_at DESC"
 
     sql = f"""
         SELECT i.*, u.name
@@ -124,21 +104,10 @@ def search_inquiries(keyword=None, page=1, size=10, sort="latest"):
         ORDER BY {order_sql}
         LIMIT %s OFFSET %s
     """
-
     params += [size, offset]
+    return _query_all(sql, params)
 
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, params)
-            return cursor.fetchall()
-
-# 문의글 상태(status)를 변경하는 함수
+# 상태 업데이트
 def update_status(inquiry_id, status):
-    """
-    문의글의 상태(status)를 변경하는 함수
-    """
     sql = "UPDATE inquiry SET status = %s, updated_at = NOW() WHERE id = %s"
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, (status, inquiry_id))
-        conn.commit()
+    _execute(sql, (status, inquiry_id))
