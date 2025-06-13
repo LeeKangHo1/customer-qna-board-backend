@@ -131,3 +131,14 @@ def search_inquiries(keyword=None, page=1, size=10, sort="latest"):
         with conn.cursor() as cursor:
             cursor.execute(sql, params)
             return cursor.fetchall()
+
+# 문의글 상태(status)를 변경하는 함수
+def update_status(inquiry_id, status):
+    """
+    문의글의 상태(status)를 변경하는 함수
+    """
+    sql = "UPDATE inquiry SET status = %s, updated_at = NOW() WHERE id = %s"
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (status, inquiry_id))
+        conn.commit()
