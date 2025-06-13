@@ -18,8 +18,15 @@
 
 ```json
 {
-  "token": "<JWT Token>"
+  "token": "<JWT Token>",
+  "user": {
+    "id": 1,
+    "login_id": "user123",
+    "name": "홍길동",
+    "email": "user@example.com"
+  }
 }
+
 ```
 
 ---
