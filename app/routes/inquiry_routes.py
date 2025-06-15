@@ -29,7 +29,6 @@ def create_inquiry():
 
 # 필터링/전체 목록 조회 (GET /api/inquiries)
 @inquiry_bp.route("/inquiries", methods=["GET"])
-@token_required
 def get_filtered_inquiries():
     try:
         query = request.args

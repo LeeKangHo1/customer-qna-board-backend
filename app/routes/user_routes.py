@@ -22,7 +22,17 @@ def login():
             "is_admin": user["is_admin"]
         })
 
-        return jsonify({"token": token}), 200
+        # 사용자 정보 포함하여 응답
+        return jsonify({
+            "token": token,
+            "user": {
+                "id": user["id"],
+                "login_id": user["login_id"],
+                "name": user["name"],
+                "email": user["email"],  # ⚠️ user["email"]도 login_user에서 리턴 필요
+                "is_admin": user["is_admin"]
+            }
+        }), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 401
 

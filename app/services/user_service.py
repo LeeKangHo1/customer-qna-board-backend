@@ -23,6 +23,7 @@ def login_user(data):
         "id": user["id"],
         "name": user["name"],
         "login_id": user["login_id"],
+        "email": user["email"],  # ✅ 추가
         "is_admin": bool(user["is_admin"])
     }
 
