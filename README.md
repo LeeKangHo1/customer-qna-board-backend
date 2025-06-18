@@ -176,3 +176,81 @@ UPDATE [테이블명] SET is_deleted = 1 WHERE id = :id;
 - `is_admin = 1` 로 관리자 여부 판별
 
 ---
+## 피드백
+
+### 1. 백엔드에서 로깅 필요 (에러 메세지 로깅)
+
+- logging 모듈 쓰기
+- 로깅을 위한 코드 필요
+- 서버 실행 중 발생한 에러 내용을 자동으로 저장하는 기능과 저장하는 파일이 있어야 한다.
+
+### 2. sql은 스네이크 케이스, js는 카멜 케이스 표기
+
+- Spring JPA처럼 DB에서 데이터를 불러와 매핑할 때 자동으로 변수 이름을 카멜케이스로 바꾸지 않는다.
+    - created_at(sql 컬럼이름) → createdAt으로 자동 변환
+- 프론트를 위해서 response 날리기 전(보통 직전이 괜찮음) 카멜 케이스로 변환해서 보내야 한다.
+
+### 3. 파일 구조 (좋지 못함)
+
+```bash
+backend/
+├── app/                        # 주요 애플리케이션 코드
+│   ├── __init__.py             # Flask 앱 초기화 및 확장 등록
+│   ├── config.py               # 환경 설정 (DB, JWT 시크릿 등)
+│
+│   ├── models/                 # 데이터베이스 모델 정의
+│   │   ├── __init__.py
+│   │   ├── user_model.py
+│   │   ├── inquiry_model.py
+│   │   └── answer_model.py
+│
+│   ├── routes/                 # API 라우팅
+│   │   ├── __init__.py
+│   │   ├── user_routes.py
+│   │   ├── inquiry_routes.py
+│   │   └── answer_routes.py
+│
+│   ├── services/               # 비즈니스 로직 처리
+│   │   ├── user_service.py
+│   │   ├── inquiry_service.py
+│   │   └── answer_service.py
+│
+│   └── utils/                  # 유틸리티 (JWT 등)
+│       └── jwt_util.py
+│
+├── run.py                      # 앱 실행 엔트리포인트
+└── requirements.txt            # 의존성 패키지 목록
+```
+
+- 모델, 라우트, 서비스로 나누지 말고 user, inquiry, answer 별(기능)로 폴더를 나눠야 한다.
+
+```bash
+app/
+├── user/
+│   ├── user_model.py         # DB 모델
+│   ├── user_routes.py        # Flask Blueprint 라우트
+│   ├── user_service.py       # 비즈니스 로직
+│   └── __init__.py           # 모듈 초기화용 (선택)
+│
+├── inquiry/
+│   ├── inquiry_model.py
+│   ├── inquiry_routes.py
+│   ├── inquiry_service.py
+│   └── __init__.py
+│
+├── answer/
+│   ├── answer_model.py
+│   ├── answer_routes.py
+│   ├── answer_service.py
+│   └── __init__.py
+│
+├── utils/                    # 공통 유틸 함수
+│   ├── jwt_util.py
+│   ├── password_util.py
+│   ├── error_handler.py
+│   └── __init__.py
+│
+├── config.py                # 환경설정 (DB, JWT, etc)
+├── db.py                    # DB 연결, 초기화
+└── __init__.py              # create_app 함수 등
+```
